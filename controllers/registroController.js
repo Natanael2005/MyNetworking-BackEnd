@@ -75,21 +75,23 @@ export const verificarContacto = async (req, res, next) => {
 
 
 
-import { createSubscriptionSession } from '../services/paymentService.js';
+import { createSubscriptionIntent } from '../services/paymentService.js';
 
 export const iniciarPago = async (req, res) => {
-  const { name, lastName, email, phoneNumber, jobTitle, plan } = req.body;
+  const { name, lastName, email, phoneNumber, jobTitle, plan, preUserId } = req.body;
   // Validación de campos
-  if (!name || !lastName || !email || !plan || !jobTitle || !['monthly','yearly'].includes(plan)) {
+  const planValido = ['monthly', 'yearly'].includes(plan);
+  if (!name || !lastName || !email || !planValido || !jobTitle || !preUserId) {
     return res.status(400).json({ error: 'Datos o plan inválido' });
   }
 
   try {
-    const session = await createSubscriptionSession(
+    const intent = await createSubscriptionIntent(
       { name, lastName, email, phoneNumber, jobTitle },
-      plan
+      plan,
+      preUserId
     );
-    return res.json({ sessionId: session.id, url: session.url });
+    return res.json(intent);
   } catch (err) {
     console.error('Error iniciando suscripción:', err);
     return res.status(500).json({ error: 'No se pudo iniciar el pago.' });

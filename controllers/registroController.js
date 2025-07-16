@@ -78,20 +78,29 @@ export const verificarContacto = async (req, res, next) => {
 import { createSubscriptionIntent } from '../services/paymentService.js';
 
 export const iniciarPago = async (req, res) => {
-  const { name, lastName, email, phoneNumber, jobTitle, plan, preUserId } = req.body;
-  // Validación de campos
+  const { preUserId, plan } = req.body;
+
   const planValido = ['monthly', 'yearly'].includes(plan);
-  if (!name || !lastName || !email || !planValido || !jobTitle || !preUserId) {
+  if (!preUserId || !planValido) {
     return res.status(400).json({ error: 'Datos o plan inválido' });
   }
 
   try {
-    const intent = await createSubscriptionIntent(
-      { name, lastName, email, phoneNumber, jobTitle },
-      plan,
-      preUserId
-    );
-    return res.json(intent);
+    const preUser = await PreUser.findById(preUserId).lean();
+    if (!preUser) {
+      return res.status(404).json({ error: 'Pre-usuario no encontrado' });
+    }
+
+    const contact = {
+      name: preUser.name,
+      lastName: preUser.lastName,
+      email: preUser.email,
+      phoneNumber: preUser.phoneNumber,
+      jobTitle: preUser.jobTitle
+    };
+
+    const intent = await createSubscriptionIntent(contact, plan, preUserId);
+    return res.json({ client_secret: intent.client_secret });
   } catch (err) {
     console.error('Error iniciando suscripción:', err);
     return res.status(500).json({ error: 'No se pudo iniciar el pago.' });

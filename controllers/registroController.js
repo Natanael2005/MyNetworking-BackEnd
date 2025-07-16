@@ -1,5 +1,6 @@
 import { findUserInMongo } from '../services/userService.js';
 import { findUserInFirebase } from '../services/authService.js';
+import PreUser from '../models/PreUser.js';
 
 export const verificarContacto = async (req, res, next) => {
   const { name, lastName, email, phoneNumber, jobTitle } = req.body;
@@ -38,7 +39,23 @@ export const verificarContacto = async (req, res, next) => {
   // 4 resultados
   if (!mongoUser && !firebaseUser) {
     // Nuevo usuario
-    return res.json({ status: 'new' });
+    try {
+      const preUser = await PreUser.create({
+        name,
+        lastName,
+        email,
+        phoneNumber,
+        jobTitle
+      });
+      return res.json({ status: 'new', preUserId: preUser._id });
+    } catch (err) {
+      console.error('Error guardando PreUser:', err);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Error al guardar pre-registro',
+        details: err.message
+      });
+    }
   }
   if (mongoUser && !firebaseUser) {
     // Existe en Mongo, falta la contraseña

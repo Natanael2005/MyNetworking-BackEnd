@@ -2,6 +2,9 @@
 
 Este proyecto implementa la lógica de registro y pagos para la aplicación.
 
+## Configuración
+Copia el archivo `.env.example` a `.env` y completa cada variable con tus valores.
+
 ## Flujo de registro y pago
 
 1. **PreUser**

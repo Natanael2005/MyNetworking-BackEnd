@@ -1,77 +1,59 @@
 import { findUserInMongo } from '../services/userService.js';
 import { findUserInFirebase } from '../services/authService.js';
+import { findPreUserByEmail, createPreUser } from '../services/preUserService.js';
 import PreUser from '../models/PreUser.js';
 
-export const verificarContacto = async (req, res, next) => {
+export const verificarContacto = async (req, res) => {
   const { name, lastName, email, phoneNumber, jobTitle } = req.body;
 
-  // 1) Asegurar que solo vengan estos campos
-  const allowedFields = ['name','lastName','email','phoneNumber','jobTitle'];
+  const allowedFields = ['name', 'lastName', 'email', 'phoneNumber', 'jobTitle'];
   const received = Object.keys(req.body);
-  const valid = received.length === allowedFields.length
-             && received.every(f => allowedFields.includes(f));
+  const valid = received.length === allowedFields.length &&
+                received.every(f => allowedFields.includes(f));
   if (!valid) {
     return res.status(400).json({ error: 'Parámetros inválidos' });
   }
 
-  // Buscar pre-registro existente antes de consultar las bases de datos
-  let preUser;
-  try {
-    preUser = await PreUser.findOne({ email }).exec();
-    if (preUser) {
-      return res.json({ status: 'new', preUserId: preUser._id });
-    }
-  } catch (err) {
-    console.error('Error buscando PreUser:', err);
+  const handleError = (message, err) => {
+    console.error(message, err);
     return res.status(500).json({
       status: 'error',
-      message: 'Error al consultar pre-registro',
+      message,
       details: err.message
     });
+  };
+
+  const { preUser, error: preErr } = await findPreUserByEmail(email);
+  if (preErr) {
+    return handleError('Error al consultar pre-registro', preErr);
+  }
+  if (preUser) {
+    return res.json({ status: 'new', preUserId: preUser._id });
   }
 
-  // 2 Llamada a MongoDB
   const { user: mongoUser, error: mongoErr } = await findUserInMongo(email);
   if (mongoErr) {
-    console.error('Error Mongo:', mongoErr);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Error al consultar la base de datos',
-      details: mongoErr.message
-    });
+    return handleError('Error al consultar la base de datos', mongoErr);
   }
 
-  // 3 Llamada a Firebase Auth
   const { user: firebaseUser, error: authErr } = await findUserInFirebase(email);
   if (authErr) {
-    console.error('Error Firebase:', authErr);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Error al consultar el servicio de autenticación',
-      details: authErr.message
-    });
+    return handleError('Error al consultar el servicio de autenticación', authErr);
   }
 
   // 4 resultados
   if (!mongoUser && !firebaseUser) {
-    // Nuevo usuario: crear pre-registro
-    try {
-      const newPreUser = await PreUser.create({
-        name,
-        lastName,
-        email,
-        phoneNumber,
-        jobTitle
-      });
-      return res.json({ status: 'new', preUserId: newPreUser._id });
-    } catch (err) {
-      console.error('Error guardando PreUser:', err);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Error al guardar pre-registro',
-        details: err.message
-      });
+    const { preUser: newPreUser, error: createErr } = await createPreUser({
+      name,
+      lastName,
+      email,
+      phoneNumber,
+      jobTitle
+    });
+    if (createErr) {
+      return handleError('Error al guardar pre-registro', createErr);
     }
+    return res.json({ status: 'new', preUserId: newPreUser._id });
   }
   if (mongoUser && !firebaseUser) {
     // Existe en Mongo, falta la contraseña

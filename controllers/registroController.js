@@ -14,6 +14,21 @@ export const verificarContacto = async (req, res, next) => {
     return res.status(400).json({ error: 'Parámetros inválidos' });
   }
 
+  // Buscar pre-registro existente antes de consultar las bases de datos
+  try {
+    const preUser = await PreUser.findOne({ email }).exec();
+    if (preUser) {
+      return res.json({ status: 'new', preUserId: preUser._id });
+    }
+  } catch (err) {
+    console.error('Error buscando PreUser:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error al consultar pre-registro',
+      details: err.message
+    });
+  }
+
   // 2 Llamada a MongoDB
   const { user: mongoUser, error: mongoErr } = await findUserInMongo(email);
   if (mongoErr) {

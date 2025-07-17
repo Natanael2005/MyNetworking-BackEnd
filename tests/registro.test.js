@@ -63,6 +63,26 @@ describe('Registro', () => {
     expect(PreUser.create).not.toHaveBeenCalled();
   });
 
+  test('verificarContacto no crea PreUser si usuario existe en User', async () => {
+    PreUser.findOne.mockReturnValue({ exec: () => Promise.resolve(null) });
+    findUserInMongo.mockResolvedValue({ user: { _id: 'u1' }, error: null });
+    findUserInFirebase.mockResolvedValue({ user: null, error: null });
+
+    const res = await request(app)
+      .post('/registro/contacto')
+      .send({
+        name: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        phoneNumber: '123',
+        jobTitle: 'Dev'
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ status: 'pendingAuth', user: { _id: 'u1' } });
+    expect(PreUser.create).not.toHaveBeenCalled();
+  });
+
   test('iniciarPago retorna client_secret', async () => {
     const preUser = {
       _id: 'pre1',

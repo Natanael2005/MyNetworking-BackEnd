@@ -15,8 +15,9 @@ export const verificarContacto = async (req, res, next) => {
   }
 
   // Buscar pre-registro existente antes de consultar las bases de datos
+  let preUser;
   try {
-    const preUser = await PreUser.findOne({ email }).exec();
+    preUser = await PreUser.findOne({ email }).exec();
     if (preUser) {
       return res.json({ status: 'new', preUserId: preUser._id });
     }
@@ -53,19 +54,16 @@ export const verificarContacto = async (req, res, next) => {
 
   // 4 resultados
   if (!mongoUser && !firebaseUser) {
-    // Nuevo usuario. Si ya existe un PreUser con este email, reutilizarlo
+    // Nuevo usuario: crear pre-registro
     try {
-      let preUser = await PreUser.findOne({ email }).exec();
-      if (!preUser) {
-        preUser = await PreUser.create({
-          name,
-          lastName,
-          email,
-          phoneNumber,
-          jobTitle
-        });
-      }
-      return res.json({ status: 'new', preUserId: preUser._id });
+      const newPreUser = await PreUser.create({
+        name,
+        lastName,
+        email,
+        phoneNumber,
+        jobTitle
+      });
+      return res.json({ status: 'new', preUserId: newPreUser._id });
     } catch (err) {
       console.error('Error guardando PreUser:', err);
       return res.status(500).json({

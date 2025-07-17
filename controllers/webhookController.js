@@ -1,5 +1,6 @@
 import stripe from '../config/stripe.js';
 import User from '../models/User.js';
+import PreUser from '../models/PreUser.js';
 
 export const handleStripeWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -17,31 +18,51 @@ export const handleStripeWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const { name, lastName, phoneNumber, jobTitle } = session.metadata;
-    const subscriptionId = session.subscription; // ID de la suscripción
+  if (event.type === 'invoice.paid' || event.type === 'payment_intent.succeeded') {
+    const data = event.data.object;
 
-    try {
-      // Upsert: crea o actualiza el usuario con stripe_id & estado
-      await User.findOneAndUpdate(
-        { email: session.customer_email },
-        {
-          $set: {
-            name,
-            lastName,
-            phoneNumber,
-            jobTitle,
-            stripe_id: session.customer,
-            stripeSubscriptionId: subscriptionId,
-            estado: 'pago_realizado'
-          }
-        },
-        { upsert: true, new: true }
-      ).exec();
-      console.log(`✅ Usuario ${session.customer_email} marcado como pagado`);
-    } catch (dbErr) {
-      console.error('❌ Error actualizando usuario en webhook:', dbErr);
+    let preUserId = data.client_reference_id || data.metadata?.preUserId;
+    let subscriptionId = data.subscription || data.metadata?.subscriptionId;
+    const customerId = data.customer;
+
+    if (!preUserId && subscriptionId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        preUserId = sub.metadata?.preUserId;
+      } catch (subErr) {
+        console.error('Error obteniendo suscripción de Stripe:', subErr);
+      }
+    }
+
+    if (preUserId) {
+      try {
+        const preUser = await PreUser.findById(preUserId).lean();
+        if (preUser) {
+          await User.findOneAndUpdate(
+            { email: preUser.email },
+            {
+              $set: {
+                name: preUser.name,
+                lastName: preUser.lastName,
+                phoneNumber: preUser.phoneNumber,
+                jobTitle: preUser.jobTitle,
+                stripe_id: customerId,
+                stripeSubscriptionId: subscriptionId,
+                estado: 'pago_realizado'
+              }
+            },
+            { upsert: true, new: true }
+          ).exec();
+          await PreUser.findByIdAndDelete(preUserId).exec();
+          console.log(`✅ Usuario ${preUser.email} registrado por webhook`);
+        } else {
+          console.error('PreUser no encontrado para id:', preUserId);
+        }
+      } catch (dbErr) {
+        console.error('❌ Error procesando webhook:', dbErr);
+      }
+    } else {
+      console.error('preUserId no encontrado en evento de Stripe');
     }
   }
 

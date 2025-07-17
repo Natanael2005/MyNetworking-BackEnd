@@ -38,15 +38,18 @@ export const verificarContacto = async (req, res, next) => {
 
   // 4 resultados
   if (!mongoUser && !firebaseUser) {
-    // Nuevo usuario
+    // Nuevo usuario. Si ya existe un PreUser con este email, reutilizarlo
     try {
-      const preUser = await PreUser.create({
-        name,
-        lastName,
-        email,
-        phoneNumber,
-        jobTitle
-      });
+      let preUser = await PreUser.findOne({ email }).exec();
+      if (!preUser) {
+        preUser = await PreUser.create({
+          name,
+          lastName,
+          email,
+          phoneNumber,
+          jobTitle
+        });
+      }
       return res.json({ status: 'new', preUserId: preUser._id });
     } catch (err) {
       console.error('Error guardando PreUser:', err);

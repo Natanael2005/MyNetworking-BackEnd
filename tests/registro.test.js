@@ -26,6 +26,7 @@ describe('Registro', () => {
     findUserInMongo.mockResolvedValue({ user: null, error: null });
     findUserInFirebase.mockResolvedValue({ user: null, error: null });
     PreUser.create.mockResolvedValue({ _id: 'pre1' });
+    PreUser.findOne.mockReturnValue({ exec: () => Promise.resolve(null) });
 
     const res = await request(app)
       .post('/registro/contacto')
@@ -40,6 +41,26 @@ describe('Registro', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'new', preUserId: 'pre1' });
     expect(PreUser.create).toHaveBeenCalled();
+  });
+
+  test('verificarContacto reutiliza PreUser existente', async () => {
+    findUserInMongo.mockResolvedValue({ user: null, error: null });
+    findUserInFirebase.mockResolvedValue({ user: null, error: null });
+    PreUser.findOne.mockReturnValue({ exec: () => Promise.resolve({ _id: 'pre1' }) });
+
+    const res = await request(app)
+      .post('/registro/contacto')
+      .send({
+        name: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        phoneNumber: '123',
+        jobTitle: 'Dev'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'new', preUserId: 'pre1' });
+    expect(PreUser.create).not.toHaveBeenCalled();
   });
 
   test('iniciarPago retorna client_secret', async () => {

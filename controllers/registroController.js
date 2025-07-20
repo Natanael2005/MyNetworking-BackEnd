@@ -6,14 +6,6 @@ import PreUser from '../models/PreUser.js';
 export const verificarContacto = async (req, res) => {
   const { name, lastName, email, phoneNumber, jobTitle } = req.body;
 
-  const allowedFields = ['name', 'lastName', 'email', 'phoneNumber', 'jobTitle'];
-  const received = Object.keys(req.body);
-  const valid = received.length === allowedFields.length &&
-                received.every(f => allowedFields.includes(f));
-  if (!valid) {
-    return res.status(400).json({ error: 'Parámetros inválidos' });
-  }
-
   const handleError = (message, err) => {
     console.error(message, err);
     return res.status(500).json({
@@ -27,6 +19,7 @@ export const verificarContacto = async (req, res) => {
   if (preErr) {
     return handleError('Error al consultar pre-registro', preErr);
   }
+
   if (preUser) {
     return res.json({ status: 'new', preUserId: preUser._id });
   }
@@ -55,10 +48,12 @@ export const verificarContacto = async (req, res) => {
     }
     return res.json({ status: 'new', preUserId: newPreUser._id });
   }
+
   if (mongoUser && !firebaseUser) {
     // Existe en Mongo, falta la contraseña
     return res.status(201).json({ status: 'pendingAuth', user: mongoUser });
   }
+
   if (!mongoUser && firebaseUser) {
     // Caso extraño xd: existe en Auth pero no en Mongo
     return res.status(500).json({
@@ -67,6 +62,7 @@ export const verificarContacto = async (req, res) => {
       firebaseUid: firebaseUser.uid
     });
   }
+  
   // Usuario completamente registrado
   return res.json({ status: 'registered', firebaseUid: firebaseUser.uid });
 };

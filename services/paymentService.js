@@ -1,5 +1,13 @@
 import stripe from '../config/stripe.js';
 
+// Validar que los IDs de precios estén configurados
+const { PRICE_ID_MONTHLY, PRICE_ID_YEARLY } = process.env;
+if (!PRICE_ID_MONTHLY || !PRICE_ID_YEARLY) {
+  const msg = 'Faltan PRICE_ID_MONTHLY o PRICE_ID_YEARLY en las variables de entorno';
+  console.error(msg);
+  throw new Error(msg);
+}
+
 /**
  * Crea un intent de suscripción gestionando el cliente de Stripe.
  * @param {{ name:string, lastName:string, email:string, phoneNumber?:string, jobTitle?:string }} contact

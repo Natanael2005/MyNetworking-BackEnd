@@ -1,4 +1,4 @@
-import admin from '../config/firebase.js';
+import admin from '../../config/firebase.js';
 
 /**
  * Busca un usuario por email en Firebase Auth.

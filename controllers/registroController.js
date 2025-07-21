@@ -1,6 +1,6 @@
-import { findUserInMongo } from '../services/userService.js';
-import { findUserInFirebase } from '../services/authService.js';
-import { findPreUserByEmail, createPreUser } from '../services/preUserService.js';
+import { findUserInMongo } from '../services/mongoDb/userService.js';
+import { findUserInFirebase } from '../services/firebase/authService.js';
+import { findPreUserByEmail, createPreUser } from '../services/mongoDb/preUserService.js';
 import PreUser from '../models/PreUser.js';
 
 export const verificarContacto = async (req, res) => {
@@ -69,7 +69,7 @@ export const verificarContacto = async (req, res) => {
 
 
 
-import { createSubscriptionIntent } from '../services/paymentService.js';
+import { createSubscriptionIntent } from '../services/stripe/paymentService.js';
 
 export const iniciarPago = async (req, res) => {
   const { preUserId, plan } = req.body;

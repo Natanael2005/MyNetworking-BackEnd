@@ -10,7 +10,7 @@ export async function findStripeCustomerByEmail(email) {
     const existing = await stripe.customers.list({ email, limit: 1 });
     return existing.data[0] || null;
   } catch (error) {
-    console.error('❌ Error buscando cliente por email en Stripe:', error);
+    console.error('Error buscando cliente por email en Stripe:', error);
     throw new Error('No se pudo buscar el cliente en Stripe.');
   }
 }
@@ -28,7 +28,7 @@ export async function createStripeCustomer(contact) {
       phone: contact.phoneNumber
     });
   } catch (error) {
-    console.error('❌ Error creando cliente en Stripe:', error);
+    console.error('Error creando cliente en Stripe:', error);
     throw new Error('No se pudo crear el cliente en Stripe.');
   }
 }
